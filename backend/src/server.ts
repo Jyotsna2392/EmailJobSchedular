@@ -58,7 +58,7 @@ async function startServer() {
     await reconcileJobsOnServerStart();
 
     // 5. Start Express Listener
-    app.listen(config.port, () => {
+   app.listen(config.port, '0.0.0.0', () => {
       console.log(`\n======================================================`);
       console.log(`📡 Backend Server listening on http://localhost:${config.port}`);
       console.log(`📊 Live BullMQ Dashboard: http://localhost:${config.port}/admin/queues`);
