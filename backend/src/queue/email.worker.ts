@@ -131,8 +131,6 @@ export function initEmailWorker(): Worker<EmailJobPayload> {
         if (provider === 'brevo') {
           console.log(`📧 Sending email via Brevo HTTPS API for Job ${data.emailId}`);
           sendResult = await sendEmailViaBrevo({
-            fromEmail: data.senderEmail,
-            fromName: emailRecord.senderAccount?.name || config.brevo.senderName,
             to: data.recipient,
             subject: data.subject,
             body: data.body,
