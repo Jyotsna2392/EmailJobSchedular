@@ -3,6 +3,7 @@ import { getRedisConnection } from '../config/redis';
 import { EMAIL_QUEUE_NAME, EmailJobPayload, getEmailQueue } from './email.queue';
 import { prisma } from '../config/db';
 import { sendEmailViaEthereal } from '../services/ethereal.service';
+import { sendEmailViaBrevo } from '../services/brevo.service';
 import { indexEmailInElasticsearch } from '../services/search.service';
 import { sendSlackRateLimitNotification } from '../services/slack.service';
 import { config } from '../config/env';
@@ -121,23 +122,39 @@ export function initEmailWorker(): Worker<EmailJobPayload> {
         return;
       }
 
-      // 4. Send Email via Ethereal SMTP
+      // 4. Send Email via Ethereal SMTP or Brevo HTTPS API based on EMAIL_PROVIDER
       try {
-        const smtpUser = emailRecord.senderAccount?.smtpUser;
-        const smtpPass = emailRecord.senderAccount?.smtpPass;
-        const smtpHost = emailRecord.senderAccount?.smtpHost;
-        const smtpPort = emailRecord.senderAccount?.smtpPort;
+        let sendResult: { messageId: string; etherealUrl?: string };
 
-        const sendResult = await sendEmailViaEthereal({
-          smtpUser,
-          smtpPass,
-          smtpHost,
-          smtpPort,
-          from: data.senderEmail,
-          to: data.recipient,
-          subject: data.subject,
-          body: data.body,
-        });
+        const provider = (config.emailProvider || process.env.EMAIL_PROVIDER || 'ethereal').toLowerCase();
+
+        if (provider === 'brevo') {
+          console.log(`📧 Sending email via Brevo HTTPS API for Job ${data.emailId}`);
+          sendResult = await sendEmailViaBrevo({
+            fromEmail: data.senderEmail,
+            fromName: emailRecord.senderAccount?.name || config.brevo.senderName,
+            to: data.recipient,
+            subject: data.subject,
+            body: data.body,
+          });
+        } else {
+          console.log(`📧 Sending email via Ethereal SMTP for Job ${data.emailId}`);
+          const smtpUser = emailRecord.senderAccount?.smtpUser;
+          const smtpPass = emailRecord.senderAccount?.smtpPass;
+          const smtpHost = emailRecord.senderAccount?.smtpHost;
+          const smtpPort = emailRecord.senderAccount?.smtpPort;
+
+          sendResult = await sendEmailViaEthereal({
+            smtpUser,
+            smtpPass,
+            smtpHost,
+            smtpPort,
+            from: data.senderEmail,
+            to: data.recipient,
+            subject: data.subject,
+            body: data.body,
+          });
+        }
 
         const sentAt = new Date();
 
@@ -147,12 +164,12 @@ export function initEmailWorker(): Worker<EmailJobPayload> {
           data: {
             status: 'SENT',
             sentAt: sentAt,
-            etherealUrl: sendResult.etherealUrl,
+            etherealUrl: sendResult.etherealUrl || null,
             errorMessage: null,
           },
         });
 
-        console.log(`✅ Email SENT successfully! ID: ${sentRecord.id} | Preview: ${sendResult.etherealUrl}`);
+        console.log(`✅ Email SENT successfully! ID: ${sentRecord.id} | Provider: ${provider}${sendResult.etherealUrl ? ` | Preview: ${sendResult.etherealUrl}` : ''}`);
 
         // 6. Index in Elasticsearch
         await indexEmailInElasticsearch({

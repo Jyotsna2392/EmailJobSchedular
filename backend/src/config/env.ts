@@ -23,6 +23,10 @@ const envSchema = z.object({
   SLACK_REDIRECT_URI: z.string().default('http://localhost:5000/api/slack/callback'),
   ETHEREAL_USER: z.string().optional(),
   ETHEREAL_PASS: z.string().optional(),
+  EMAIL_PROVIDER: z.enum(['ethereal', 'brevo']).default('ethereal'),
+  BREVO_API_KEY: z.string().optional(),
+  BREVO_SENDER_EMAIL: z.string().optional(),
+  BREVO_SENDER_NAME: z.string().default('ReachInbox Scheduler'),
 });
 
 const _env = envSchema.safeParse(process.env);
@@ -66,5 +70,11 @@ export const config = {
   ethereal: {
     user: env.ETHEREAL_USER,
     pass: env.ETHEREAL_PASS,
+  },
+  emailProvider: env.EMAIL_PROVIDER,
+  brevo: {
+    apiKey: env.BREVO_API_KEY,
+    senderEmail: env.BREVO_SENDER_EMAIL,
+    senderName: env.BREVO_SENDER_NAME,
   },
 };
