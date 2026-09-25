@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-3">
           {/* Live BullMQ Queue Link */}
           <a
-            href="http://localhost:5000/admin/queues"
+            href="https://emailjobschedular.onrender.com/admin/queues"
             target="_blank"
             rel="noreferrer"
             className="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs transition-colors"
